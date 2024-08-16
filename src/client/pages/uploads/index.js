@@ -1,37 +1,68 @@
 "use client";
 
 
-import { useState } from 'react';
+// components/UploadForm.js
+import React, { useState } from 'react';
 
-export default function UploadPage() {
-  const [message, setMessage] = useState('');
+const UploadForm = () => {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleSubmit = async (event) => {
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]);
+  };
+
+  const handleUpload = async (event) => {
     event.preventDefault();
-    
-    const formData = new FormData();
-    const file = document.getElementById('fileInput').files[0];
+    if (!file) {
+      setError('Please select a file to upload');
+      return;
+    }
 
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/uploads', {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const response = await fetch('/api/uploads', {
+        method: 'POST',
+        body: formData,
+      });
 
-    const result = await response.json();
-    setMessage(result.message || result.error);
+      if (response.ok) {
+        const result = await response.json();
+        setSuccess('File uploaded successfully');
+        console.log('File uploaded:', result);
+      } else {
+        const errorResult = await response.json();
+        setError(`Error: ${errorResult.error}`);
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setError('Upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
     <div>
-      <h1>Upload a File</h1>
-      <h2> IOIO</h2>
-      <form id="uploadForm" onSubmit={handleSubmit} enctype="multipart/form-data">
-        <input type="file" id="fileInput" name="file" required />
-        <button type="submit">Upload</button>
+      <h1>Upload File</h1>
+      <form onSubmit={handleUpload}>
+        <input type="file" onChange={handleFileChange} />
+        <button type="submit" disabled={uploading}>
+          {uploading ? 'Uploading...' : 'Upload'}
+        </button>
       </form>
-      {message && <p>{message}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {success && <p style={{ color: 'green' }}>{success}</p>}
     </div>
   );
-}
+};
+
+export default UploadForm;
