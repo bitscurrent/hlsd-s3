@@ -3,14 +3,21 @@ import styles from "./page.module.css";
 
 import UploadForm from "@/client/pages/uploads";
 
+import { SessionProvider } from 'next-auth/react';
 
-export default function Home() {
+export default function Home({ Component, pageProps }) {
   return (
     
     <>
-    
-    
-    <UploadForm />
+    {/* <SessionProvider session={pageProps.session}> */}
+      {/* <Component {...pageProps} /> */}
+      <UploadForm />
+    {/* </SessionProvider> */}
+
     </>
   );
 }
+
+
+
+

@@ -80,15 +80,19 @@
 
 
 
-
 import AWS from 'aws-sdk';
 import { NextResponse } from 'next/server';
-import { Readable } from 'stream';
+import { sendMessage } from '@/app/kafka/producer.js';
+
+const aws_region = process.env.AWS_REGION;
+const aws_access_key_id = process.env.AWS_ACCESS_KEY_ID;
+const aws_secret_access_key = process.env.AWS_SECRET_ACCESS_KEY;
+const aws_bucketname = process.env.AWS_S3_BUCKET_NAME;
 
 AWS.config.update({
-  region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  region: aws_region,
+  accessKeyId: aws_access_key_id,
+  secretAccessKey: aws_secret_access_key,
 });
 
 const s3 = new AWS.S3();
@@ -96,7 +100,7 @@ const s3 = new AWS.S3();
 // Helper function to upload file to S3
 const uploadFileToS3 = async (fileBuffer, fileName) => {
   const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Bucket: aws_bucketname,
     Key: `videos/${fileName}`, // Store the file in a "videos" folder in S3
     Body: fileBuffer,
     ContentType: 'video/mp4', // Specify the content type for videos
@@ -123,6 +127,16 @@ export async function POST(req) {
 
     // Upload file to S3
     const result = await uploadFileToS3(fileBuffer, fileName);
+
+    // Kafka message after successful upload
+    const kafkaMessage = JSON.stringify({
+      fileName: fileName,
+      location: result.Location,
+      uploadTime: new Date().toISOString(),
+    });
+
+    // Send message to Kafka topic
+    await sendMessage('video-uploads', kafkaMessage);
     
     return NextResponse.json({ message: 'File uploaded successfully', location: result.Location }, { status: 200 });
   } catch (error) {
@@ -130,3 +144,4 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Error uploading file to S3' }, { status: 500 });
   }
 }
+
